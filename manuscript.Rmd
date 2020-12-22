@@ -1,0 +1,336 @@
+---
+title: "Tissue-specific gene expression in obese hyperglycemic mice"
+author: "Mahmoud Shaaban"
+date: "12/2/2020"
+output: 
+    pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r load_libraries}
+# loading required libraries
+library(tidyverse)
+library(DESeq2)
+library(ComplexHeatmap)
+library(circlize)
+library(reshape2)
+```
+
+```{r raw_reads_qc}
+# raw reads qc
+raw_reads_qc <- list.files('data/1st RNAanalysis/1.Rawdata_information/',
+                           full.names = TRUE) %>%
+    map(read_tsv) %>%
+    bind_rows()
+
+(raw_reads_qc %>%
+    gather(quantile, ratio, ends_with('Ratio')) %>%
+    ggplot(aes(x = ratio, fill = quantile)) +
+    geom_histogram() +
+    labs(x = 'Ratio of Reads',
+         y = 'Number of Samples',
+         fill = '') +
+    theme(legend.position = c(.5, .8),
+          legend.background = element_blank())) %>%
+    ggsave(plot = .,
+           filename = 'manuscript/figures/raw_reads_qc.png',
+           width = 6, height = 6, units = 'cm', dpi = 300)
+```
+
+```{r alignment_qc}
+alignment_qc <- list.files('data/1st RNAanalysis/2.ReadAlignmentRate/',
+           full.names = TRUE) %>%
+    map(read_tsv) %>%
+    bind_rows()
+(alignment_qc %>%
+    gather(type, value, -SampleName) %>%
+    mutate(value = as.numeric(str_split(value, '%', simplify = TRUE)[, 1])) %>%
+    ggplot(aes(x = value, fill = type)) +
+    geom_histogram(bins = 50) +
+    labs(x = 'Ratio of Reads',
+         y = 'Number of Samples',
+         fill = '') +
+    theme(legend.position = c(.5, .8),
+          legend.background = element_blank())) %>%
+    ggsave(plot = .,
+           filename = 'manuscript/figures/alignment_qc.png',
+           width = 7, height = 7, units = 'cm', dpi = 300)
+```
+
+
+```{r counting_qc}
+counting_qc <- read_tsv('data/1st RNAanalysis/3.FeatureCount_result/MouseRNA-seq.txt.summary')
+
+df1 <- raw_reads_qc %>%
+    dplyr::select(sample = SampleName, total = ReadCount)
+
+(counting_qc %>%
+    gather(sample, value, -Status) %>%
+    mutate(sample = str_split(sample, '\\.', simplify = TRUE)[, 1]) %>%
+    filter(value > 0) %>%
+    left_join(df1) %>%
+    ggplot(aes(x = value/total, fill = Status)) +
+    geom_histogram() +
+    labs(x = 'Ratio of Reads',
+         y = 'Number of Samples',
+         fill = '') +
+    theme(legend.position = c(.6, .7),
+          legend.background = element_blank())) %>%
+    ggsave(plot = .,
+           filename = 'manuscript/figures/counting_qc.png',
+           width = 7, height = 7, units = 'cm', dpi = 300)
+```
+
+```{r pca, fig.height=4.5, fig.width=4.5}
+ob_counts <- read_rds('data/ob_counts_batched.rds')
+pcs <- prcomp(dist(t(assay(ob_counts))))
+
+(as_tibble(scale(pcs$x[, 1:2])) %>%
+    mutate(mouse = ob_counts$mouse) %>%
+    ggplot(aes(x = PC1, y = PC2, color = mouse)) +
+    geom_point() +
+    theme(legend.position = 'none')) %>%
+    ggsave(plot = .,
+           filename = 'manuscript/figures/pca.png',
+           height = 7, width = 7, units = 'cm', dpi = 300)
+```
+
+```{r var_part, fig.height=4.5, fig.width=4.5}
+var_part <- read_rds('data/variancePartition.rds')
+var_part <- as_tibble(var_part)[, c(5, 3, 2, 6)]
+names(var_part) <- c('Tissue', 'Group', 'Diet', 'Residuals')
+
+(as_tibble(var_part) %>%
+    gather(variable, variance) %>%
+    ggplot(aes(x = variable, y = variance)) +
+    geom_boxplot() +
+    labs(x = 'Variables', y = 'Variance Explained (%)')) %>%
+    ggsave(plot = .,
+           filename = 'manuscript/figures/var_part.png',
+           height = 7, width = 7, units = 'cm', dpi = 300)
+```
+
+```{r corr}
+(as_tibble(colData(ob_counts)) %>%
+    dplyr::select(group, diet, tissue, mouse) %>%
+    mutate_all(as.factor) %>%
+    mutate_all(as.numeric) %>%
+    setNames(c('Group', 'Diet', 'Tissue', 'Mouse')) %>%
+    cor() %>%
+    melt() %>%
+    ggplot(aes(x = Var1, y = Var2, fill = value)) +
+    geom_tile() +
+    scale_fill_gradient(low = 'white', high = 'black') +
+    theme(legend.position = 'none') +
+    labs(x = '', y = '')) %>%
+    ggsave(plot = .,
+           filename = 'manuscript/figures/corr.png',
+           height = 7, width = 7, units = 'cm', dpi = 300)
+```
+
+```{r distances}
+cc <- cor(scale(assay(ob_counts)))
+png(filename = 'manuscript/figures/corr.png',
+    height = 7, width = 7, units = 'cm', res = 300)
+
+Heatmap(cc,
+        row_split = ob_counts$tissue,
+        column_split = ob_counts$tissue, 
+        show_heatmap_legend = FALSE,
+        show_row_names = FALSE,
+        show_column_names = FALSE,
+        show_row_dend = FALSE,
+        show_column_dend = FALSE)
+
+dev.off()
+```
+
+```{r weights, fig.height=4.5, fig.width=4.5}
+weights <- read_tsv('data/mice_measurements/weights.tsv') %>%
+    mutate(group = toupper(str_split(mouse, '_', simplify = TRUE)[, 1]),
+           group = factor(group, levels = c('WT', 'OB')),
+           diet = str_split(mouse, '_', simplify = TRUE)[, 2],
+           diet = factor(diet, levels = c('ND', 'HFD')))
+
+(weights %>%
+    ggplot(aes(x = group, y = weight, fill = diet)) +
+    geom_boxplot() +
+    theme(legend.position = c(.99, .1),
+          legend.justification = 1,
+          legend.direction = 'horizontal',
+          legend.background = element_blank()) +
+    labs(x = 'Mice Group', y = 'Weight (g)', fill = '') +
+    lims(y = c(0, 85))) %>%
+    ggsave(plot = .,
+           filename = 'manuscript/figures/weights.png',
+           height = 7, width = 7, units = 'cm', dpi = 300)
+```
+
+```{r blood_work, fig.height=4.5, fig.width=4.5}
+blood_work <- read_tsv('data/mice_measurements/blood_work.tsv')  %>%
+    gather(type, value, -mouse) %>%
+    mutate(group = toupper(str_split(mouse, '_', simplify = TRUE)[, 1]),
+           group = factor(group, levels = c('WT', 'OB')),
+           diet = str_split(mouse, '_', simplify = TRUE)[, 2],
+           diet = factor(diet, levels = c('ND', 'HFD')))  %>%
+    filter(type %in% c('ALT_UL', 'AST_UL', 'Glucose_mgdL', 'T.Chol_mgdL'))
+
+(blood_work %>%
+    ggplot(aes(x = group, y = value, fill = diet)) +
+    geom_boxplot() +
+    facet_wrap(~type) +
+    theme(legend.position = c(0, .95),
+          legend.justification = 0,
+          legend.direction = 'horizontal',
+          legend.background = element_blank()) +
+    labs(x = 'Mice Group', y = 'Blood Measurement', fill = '')) %>%
+    ggsave(plot = .,
+           filename = 'manuscript/figures/bloodwork.png',
+           height = 10, width = 10, units = 'cm', dpi = 300)
+```
+
+```{r echo_mri, fig.height=4.5, fig.width=4.5}
+(read_tsv('data/mice_measurements/echo_mri.tsv') %>%
+    group_by(mouse) %>%
+    summarise(`Free/Total Water` = free_water/total_water,
+              `Lean/Fat` = lean/fat) %>%
+    gather(type, value, -mouse) %>%
+    mutate(group = toupper(str_split(mouse, '_', simplify = TRUE)[, 1]),
+           group = factor(group, levels = c('WT', 'OB')),
+           diet = str_split(mouse, '_', simplify = TRUE)[, 2],
+           diet = factor(diet, levels = c('ND', 'HFD'))) %>%
+    ggplot(aes(x = group, y = value)) +
+    geom_col() +
+    facet_grid(type ~ diet, scales = 'free_y') +
+    labs(x = 'Mice Group', y = 'Echo MRI (Ratio)')) %>%
+    ggsave(plot = .,
+           filename = 'manuscript/figures/echo_mri.png',
+           height = 9, width = 9, units = 'cm', dpi = 300)
+```
+
+```{r samples}
+as_tibble(colData(ob_counts)) %>%
+    dplyr::select(Mouse = mouse, everything()) %>%
+    group_by(Mouse) %>%
+    summarise(Group = unique(group),
+              Diet = unique(diet),
+              n_tissue = length(unique(tissue)),
+              n_samples = length(unique(id))) %>%
+    write_csv('manuscript/tables/mice.csv')
+```
+
+```{r biotypes_ecdf}
+ob_counts <- read_rds('data/ob_counts.rds')
+
+fd <- rowRanges(ob_counts)
+ind <- as_tibble(fd) %>%
+    filter(rowMeans(assay(ob_counts)) > 0) %>%
+    group_by(biotype) %>%
+    summarise(n = n()) %>%
+    filter(grepl('RNA', biotype), n > 100) %>%
+    pull(biotype)
+
+types <- map(ind, function(x){
+    m <- assay(ob_counts)[rowRanges(ob_counts)$biotype == x,]
+    as_tibble(melt(m))
+}) %>%
+    set_names(ind) %>%
+    bind_rows(.id = 'biotype') 
+
+(types %>%
+    filter(value > 0) %>%
+    mutate(biotype = ifelse(biotype == 'bidirectional_promoter_lncRNA',
+                            'lncRNA', biotype)) %>%
+    ggplot(aes(x = log2(value), color = biotype)) +
+    stat_ecdf() +
+    theme(legend.position = c(.8, .4),
+          legend.background = element_blank()) +
+    labs(x = 'Counts (Log_2)', y = 'ECDF', color = 'Biotype')) %>%
+    ggsave(plot = .,
+           filename = 'manuscript/figures/biotypes_ecdf.png',
+           height = 9, width = 9, units = 'cm', dpi = 300)
+```
+
+```{r biotype_count}
+(types %>%
+    group_by(biotype) %>%
+    mutate(biotype = ifelse(biotype == 'bidirectional_promoter_lncRNA',
+                            'lncRNA', biotype)) %>%
+    summarise(n = length(unique(Var1))) %>%
+    mutate(biotype = ifelse(biotype == 'bidirectional_promoter_lncRNA',
+                            'lncRNA', biotype),
+           biotype =  fct_reorder(biotype, n)) %>%
+    ggplot(aes(x = biotype, y = n)) +
+    geom_col() +
+    labs(x = 'Biotype', y = 'Number of Features') +
+    coord_flip()) %>%
+    ggsave(plot = .,
+           filename = 'manuscript/figures/biotypes_count.png',
+           height = 9, width = 9, units = 'cm', dpi = 300)
+```
+
+```{r receptors_hy}
+ob_counts <- read_rds('data/ob_counts.rds')
+dds <- vst(DESeqDataSet(ob_counts, ~1))
+
+ind <- c(Lep = 'ENSMUSG00000059201',
+         Lepr = 'ENSMUSG00000057722',
+         Npy = 'ENSMUSG00000029819',
+         Ghr = 'ENSMUSG00000055737',
+         Ghrhr = 'ENSMUSG00000004654',
+         Agrp = 'ENSMUSG00000005705')
+
+m <- assay(dds)[rownames(ob_counts) %in% unlist(ind), ob_counts$tissue == 'Hy']
+rownames(m) <- names(ind)[match(rownames(m), ind)]
+groups <- as_tibble(colData(ob_counts))[ob_counts$tissue == 'Hy',]
+
+png(filename = 'manuscript/figures/receptors_hy.png',
+    height = 7, width = 7, units = 'cm', res = 300)
+Heatmap(scale(m),
+        column_split = toupper(groups$group),
+        show_row_dend = FALSE,
+        show_heatmap_legend = FALSE,
+        column_labels = groups$diet,
+        show_column_dend = FALSE)
+dev.off()
+```
+
+```{r receptors_hi}
+m <- assay(dds)[rownames(ob_counts) %in% unlist(ind), ob_counts$tissue == 'Hi']
+rownames(m) <- names(ind)[match(rownames(m), ind)]
+groups <- as_tibble(colData(ob_counts))[ob_counts$tissue == 'Hy',]
+
+png(filename = 'manuscript/figures/receptors_hi.png',
+    height = 7, width = 7, units = 'cm', res = 300)
+Heatmap(scale(m),
+        column_split = toupper(groups$group),
+        show_row_dend = FALSE,
+        show_heatmap_legend = FALSE,
+        column_labels = groups$diet,
+        show_column_dend = FALSE)
+dev.off()
+```
+
+```{r over_representation}
+ov <- read_rds('data/over_representation.rds')
+ov %>%
+    filter(p.adjust < .1) %>%
+    group_by(variable) %>%
+    dplyr::slice(1:10) %>%
+    ungroup() %>%
+    mutate(n1 = str_split(GeneRatio, '/', simplify = TRUE)[, 1],
+           n2 = str_split(GeneRatio, '/', simplify = TRUE)[, 2],
+           ratio = round(as.numeric(n1)/as.numeric(n2), 2)) %>%
+    split(., .$variable) %>%
+    map(function(x) {
+        dplyr::select(x, Description, ratio) %>%
+        write_csv(
+            file = paste0('manuscript/tables/',
+                          unique(x$variable),
+                          '.csv'))
+    })
+```
+

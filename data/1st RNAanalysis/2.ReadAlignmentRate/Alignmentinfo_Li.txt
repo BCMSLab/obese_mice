@@ -1,0 +1,13 @@
+SampleName	OverallAlignmentRate	ConcordantZero	ConcordantPairAlignment	MultipleAlignment
+WT_ND_1_Li_S1	90.10%	22.99%	64.38%	22.99%
+WT_ND_2_Li_S2	89.21%	21.47%	64.58%	21.47%
+WT_ND_3_Li_S3	90.10%	22.04%	64.52%	22.04%
+WT_HFD_1_Li_S4	94.96%	21.23%	70.47%	21.23%
+WT_HFD_2_Li_S5	94.75%	20.62%	71.20%	20.62%
+WT_HFD_3_Li_S6	87.20%	23.79%	59.09%	23.79%
+ob_ob_ND_1_Li_S7	96.39%	20.28%	73.33%	20.28%
+ob_ob_ND_2_Li_S8	95.87%	19.22%	72.71%	19.22%
+ob_ob_ND_3_Li_S9	96.38%	19.71%	73.37%	19.71%
+ob_ob_HFD_1_Li_S10	96.13%	19.54%	72.70%	19.54%
+ob_ob_HFD_2_Li_S11	94.70%	21.51%	68.59%	21.51%
+ob_ob_HFD_3_Li_S12	96.36%	21.30%	71.47%	21.30%

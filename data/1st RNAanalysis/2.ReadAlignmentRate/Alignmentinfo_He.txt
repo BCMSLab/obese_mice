@@ -1,0 +1,13 @@
+SampleName	OverallAlignmentRate	ConcordantZero	ConcordantPairAlignment	MultipleAlignment
+WT_ND_1_He_S1	98.11%	37.07%	59.67%	37.07%
+WT_ND_2_He_S2	98.13%	36.43%	60.18%	36.43%
+WT_ND_3_He_S3	97.89%	37.07%	59.23%	37.07%
+WT_HFD_1_He_S4	98.06%	37.55%	59.05%	37.55%
+WT_HFD_2_He_S5	98.38%	37.53%	59.62%	37.53%
+WT_HFD_3_He_S6	97.83%	38.28%	57.85%	38.28%
+ob_ob_ND_1_He_S7	97.72%	35.87%	60.18%	35.87%
+ob_ob_ND_2_He_S8	97.48%	36.35%	59.21%	36.35%
+ob_ob_ND_3_He_S9	98.17%	36.17%	60.54%	36.17%
+ob_ob_HFD_1_He_S10	98.21%	36.13%	60.77%	36.13%
+ob_ob_HFD_2_He_S11	97.97%	35.95%	60.54%	35.95%
+ob_ob_HFD_3_He_S12	98.25%	35.52%	61.44%	35.52%

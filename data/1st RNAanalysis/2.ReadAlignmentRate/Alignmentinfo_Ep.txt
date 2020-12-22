@@ -1,0 +1,13 @@
+SampleName	OverallAlignmentRate	ConcordantZero	ConcordantPairAlignment	MultipleAlignment
+WT_ND_1_Ep_S13	95.81%	17.34%	74.02%	17.34%
+WT_ND_2_Ep_S14	96.33%	18.33%	74.53%	18.33%
+WT_ND_3_Ep_S15	95.61%	17.35%	74.35%	17.35%
+WT_HFD_1_Ep_S16	95.63%	18.47%	72.41%	18.47%
+WT_HFD_2_Ep_S17	95.81%	18.94%	72.96%	18.94%
+WT_HFD_3_Ep_S18	96.89%	17.35%	77.40%	17.35%
+ob_ob_ND_1_Ep_S19	96.65%	17.85%	75.93%	17.85%
+ob_ob_ND_2_Ep_S20	96.86%	17.55%	76.70%	17.55%
+ob_ob_ND_3_Ep_S21	96.88%	17.55%	76.54%	17.55%
+ob_ob_HFD_1_Ep_S22	96.25%	17.51%	74.64%	17.51%
+ob_ob_HFD_2_Ep_S23	96.27%	17.91%	74.81%	17.91%
+ob_ob_HFD_3_Ep_S24	96.84%	17.46%	76.49%	17.46%
