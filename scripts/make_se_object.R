@@ -26,9 +26,9 @@ counts <- read_tsv('data/1st RNAanalysis/3.FeatureCount_result/MouseRNA-seq.txt'
 mat <- as.matrix(dplyr::select(counts, ends_with('.bam')))
 rownames(mat) <- counts$Geneid
 
-# pheno type data
+# phenotype data
 pd <- tibble(id = colnames(mat)) %>%
-    mutate(id = str_replace(id, '_ob', ''),
+    mutate(id = str_replace(id, 'ob_ob', 'ob/ob'),
            id = str_replace(id, 'HDF', 'HFD'),
            group = str_split(id, '_', simplify = TRUE)[, 1],
            diet = str_split(id, '_', simplify = TRUE)[, 2],
@@ -39,6 +39,15 @@ pd <- tibble(id = colnames(mat)) %>%
     as.data.frame()
 
 rownames(pd) <- colnames(mat)
+
+# add measurements to phenotype data
+measurements <- map(c('weights.tsv', 'blood_work.tsv', 'echo_mri.tsv'),
+                    ~read_tsv(paste0('data/mice_measurements/', .x)))
+
+pd <- pd %>%
+    left_join(measurements[[1]]) %>%
+    left_join(measurements[[2]]) %>%
+    left_join(measurements[[3]])
 
 # gene info
 ens_mart <- useMart('ensembl')

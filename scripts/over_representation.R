@@ -8,7 +8,7 @@ library(GO.db)
 # load and format data
 ob_counts <- read_rds('data/ob_counts.rds')
 
-var_part <- read_rds('data/variancePartition.rds')
+var_part <- read_rds('data/variance_partitioned.rds')
 var_part <- var_part@.Data %>%
     bind_cols() %>%
     setNames(var_part@names) %>%

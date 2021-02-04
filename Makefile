@@ -24,10 +24,10 @@ data/variance_partitioned.rds: scripts/var_part.R \
 	
 data/over_representation.rds: scripts/over_representation.R \
 	data/ob_counts.rds \
-	data/variancePartition.rds
+	data/variance_partitioned.rds
 	R CMD BATCH --vanilla $< log/over_representation.txt
 	
 manuscript.pdf: manuscript.Rmd \
 	$(bash find data/*) \
 	$(bash find scripts/*)
-	Rscript -e 'rmarkdown::render("manuscript.Rmd")' &> log/manuscript.txt
+	Rscript -e 'rmarkdown::render("manuscript.Rmd")' > log/manuscript.txt
