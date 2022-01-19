@@ -6,6 +6,7 @@ RUN sudo apt-get install -y git-all
 RUN Rscript -e "update.packages(ask = FALSE)"
 RUN Rscript -e "install.packages('lme4')"
 RUN Rscript -e "install.packages('cowplot')"
+RUN Rscript -e "install.packages('openxlsx')"
 RUN Rscript -e "install.packages('BiocManager')"
 
 RUN Rscript -e "BiocManager::install('GenomicFeatures')"

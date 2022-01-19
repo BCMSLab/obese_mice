@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 # loading required libraries
 library(tidyverse)
 library(DESeq2)
+library(variancePartition)
 library(ComplexHeatmap)
 library(circlize)
 library(reshape2)
@@ -135,12 +136,10 @@ pcs <- prcomp(dist(t(mat)))
 (as_tibble(scale(pcs$x[, 1:2])) %>%
     bind_cols(as_tibble(colData(ob_counts))) %>%
     ggplot(aes(x = PC1, y = PC2,
-               shape = diet,
-               color = (group))) +
+               color = paste(group, '+', diet))) +
     geom_point(size = 2) +
     labs(color = '', shape = '') +
-    theme(legend.position = c(.5,.2),
-          legend.direction = 'horizontal',
+    theme(legend.position = c(.5,.4),
           legend.background = element_blank(),
           legend.spacing.y = unit(-.1, 'in'),
           panel.grid = element_blank())) %>%
@@ -282,9 +281,9 @@ types <- map(ind, function(x){
 
 ```{r biotype_count}
 (types %>%
-    group_by(biotype) %>%
     mutate(biotype = ifelse(biotype == 'bidirectional_promoter_lncRNA',
                             'lncRNA', biotype)) %>%
+    group_by(biotype) %>%
     summarise(n = length(unique(Var1))) %>%
     mutate(biotype = ifelse(biotype == 'bidirectional_promoter_lncRNA',
                             'lncRNA', biotype),
@@ -304,29 +303,28 @@ types <- map(ind, function(x){
 ```{r receptors_hy}
 ob_counts <- read_rds('data/ob_counts_batched.rds')
 mat <- assay(ob_counts, 'removed_tissue')
-ind <- c(Lep = 'ENSMUSG00000059201',
-         Lepr = 'ENSMUSG00000057722',
+ind <- c(Lepr = 'ENSMUSG00000057722',
          Npy = 'ENSMUSG00000029819',
-         Ghr = 'ENSMUSG00000055737',
-         Ghrhr = 'ENSMUSG00000004654',
+         Ghsr = 'ENSMUSG00000051136',
          Agrp = 'ENSMUSG00000005705')
 
 m <- mat[rownames(ob_counts) %in% unlist(ind), ob_counts$tissue == 'Hy']
 rownames(m) <- names(ind)[match(rownames(m), ind)]
 groups <- as_tibble(colData(ob_counts))[ob_counts$tissue == 'Hy',]
-
+rownames(m)
 png(filename = 'manuscript/figures/receptors_hy.png',
     height = 7, width = 7, units = 'cm', res = 300)
 Heatmap(m,
         column_split = (groups$group),
         show_row_dend = FALSE,
+        row_title = NULL,
         show_heatmap_legend = FALSE,
         column_labels = groups$diet,
         show_column_dend = FALSE)
 dev.off()
 ```
 
-```{r receptors_Ep}
+```{r receptors_ep}
 ob_counts <- read_rds('data/ob_counts_batched.rds')
 mat <- assay(ob_counts, 'removed_tissue')
 ind <- c(Ins1 = 'ENSMUSG00000035804',
@@ -343,10 +341,12 @@ m <- mat[rownames(ob_counts) %in% unlist(ind), tissue]
 rownames(m) <- names(ind)[match(rownames(m), ind)]
 groups <- as_tibble(colData(ob_counts))[tissue,]
 
-png(filename = 'manuscript/figures/receptors_Ep.png',
+png(filename = 'manuscript/figures/receptors_ep.png',
     height = 7, width = 7, units = 'cm', res = 300)
 Heatmap((m),
         column_split = (groups$group),
+        row_split = c(1, 2, 2, 1, 2, 2, 1),
+        row_title = NULL,
         show_row_dend = FALSE,
         show_heatmap_legend = FALSE,
         column_labels = groups$diet,
@@ -386,12 +386,11 @@ pd <- as_tibble(colData(ob_counts))
 pd %>%
     group_by(group, diet) %>%
     summarise(n_tissue = length(unique(tissue)),
-              n = length(unique(id)),
-              geo = 'GSM00000') %>%
+              n = length(unique(id))) %>%
     ungroup() %>%
     mutate(group = ifelse(duplicated(group), '', (group))) %>%
-    setNames(c('Group', 'Diet', 'Tissue (N)', 'Samples (N)', 'GEO IDs')) %>%
-    xtable(align = 'cllccl') %>%
+    setNames(c('Group', 'Diet', 'Tissue (N)', 'Samples (N)')) %>%
+    xtable(align = 'cllcc') %>%
     print(floating = FALSE,
           include.rownames = FALSE,
           booktabs = TRUE,
